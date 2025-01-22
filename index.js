@@ -36,63 +36,68 @@ const usersDrawn = {};
 
 // Webhook Endpoint
 app.post('/webhook', (req, res) => {
-  const events = req.body.events;
-  events.forEach(async (event) => {
-    if (event.type === 'message' && event.message.type === 'text') {
-      const replyToken = event.replyToken;
-      const userMessage = event.message.text.toLowerCase();
-      const userId = event.source.userId; // ใช้ userId เพื่อระบุผู้ใช้แต่ละคน
+  try {
+    const events = req.body.events;
+    events.forEach(async (event) => {
+      if (event.type === 'message' && event.message.type === 'text') {
+        const replyToken = event.replyToken;
+        const userMessage = event.message.text.toLowerCase();
+        const userId = event.source.userId; // ใช้ userId เพื่อระบุผู้ใช้แต่ละคน
 
-      let message;
+        let message;
 
-      if (userMessage === 'hybrid test') {
-        // ตรวจสอบว่าผู้ใช้เล่นไปแล้วหรือยัง
-        if (usersDrawn[userId]) {
-          message = {
-            type: 'text',
-            text: `คุณเคยสุ่มรางวัลไปแล้ว: ${usersDrawn[userId]} 🎁`,
-          };
-        } else {
-          // สุ่มรางวัล
-          const availablePrizes = prizes.filter(
-            (prize) => !Object.values(usersDrawn).includes(prize)
-          );
-
-          if (availablePrizes.length === 0) {
+        if (userMessage === 'hybrid test') {
+          // ตรวจสอบว่าผู้ใช้เล่นไปแล้วหรือยัง
+          if (usersDrawn[userId]) {
             message = {
               type: 'text',
-              text: 'รางวัลทั้งหมดถูกสุ่มออกไปแล้ว 🎉 ขอบคุณที่เข้าร่วมกิจกรรม!',
+              text: `คุณเคยสุ่มรางวัลไปแล้ว: ${usersDrawn[userId]} 🎁`,
             };
           } else {
-            const randomIndex = Math.floor(Math.random() * availablePrizes.length);
-            const prize = availablePrizes[randomIndex];
+            // สุ่มรางวัล
+            const availablePrizes = prizes.filter(
+              (prize) => !Object.values(usersDrawn).includes(prize)
+            );
 
-            // บันทึกสถานะผู้ใช้และรางวัลที่ได้
-            usersDrawn[userId] = prize;
+            if (availablePrizes.length === 0) {
+              message = {
+                type: 'text',
+                text: 'รางวัลทั้งหมดถูกสุ่มออกไปแล้ว 🎉 ขอบคุณที่เข้าร่วมกิจกรรม!',
+              };
+            } else {
+              const randomIndex = Math.floor(Math.random() * availablePrizes.length);
+              const prize = availablePrizes[randomIndex];
 
-            message = {
-              type: 'text',
-              text: `🎉 ยินดีด้วย! คุณได้รับ: ${prize}`,
-            };
+              // บันทึกสถานะผู้ใช้และรางวัลที่ได้
+              usersDrawn[userId] = prize;
+
+              message = {
+                type: 'text',
+                text: `🎉 ยินดีด้วย! คุณได้รับ: ${prize}`,
+              };
+            }
           }
+        } else {
+          message = {
+            type: 'text',
+            text: 'พิมพ์ "Hybrid TEST" เพื่อเริ่มสุ่มรางวัล!',
+          };
         }
-      } else {
-        message = {
-          type: 'text',
-          text: 'พิมพ์ "Hybrid TEST" เพื่อเริ่มสุ่มรางวัล!',
-        };
-      }
 
-      try {
-        await client.replyMessage(replyToken, message);
-      } catch (err) {
-        console.error('Error replying message:', err);
+        try {
+          await client.replyMessage(replyToken, message);
+        } catch (err) {
+          console.error('Error replying message:', err);
+        }
       }
-    }
-  });
+    });
 
-  // ส่ง status 200 เพื่อยืนยันว่า webhook ทำงานได้
-  res.status(200).end();
+    // ส่ง status 200 เพื่อยืนยันว่า webhook ทำงานได้
+    res.status(200).end();
+  } catch (error) {
+    console.error('Error handling webhook:', error);
+    res.status(500).send('Internal Server Error');
+  }
 });
 
 // เริ่มเซิร์ฟเวอร์
