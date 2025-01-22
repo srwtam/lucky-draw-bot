@@ -36,11 +36,12 @@ app.post('/webhook', (req, res) => {
       try {
         await client.replyMessage(replyToken, message);
       } catch (err) {
-        console.error(err);
+        console.error('Error replying message:', err);
       }
     }
   });
 
+  // ส่ง status 200 เพื่อยืนยันว่า webhook ทำงานได้
   res.status(200).end();
 });
 
