@@ -1,2 +1,2 @@
 # lucky-draw-bot
-Line Chatbot สำหรับสุ่มรางวัล
+Chatbot สำหรับสุ่มรางวัล
