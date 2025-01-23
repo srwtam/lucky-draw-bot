@@ -1,11 +1,18 @@
-const { Client } = require('@line/bot-sdk');
-require('dotenv').config({ path: './config/.env' });
+const { Client, middleware } = require('@line/bot-sdk');
 
 // ตั้งค่า LINE Bot SDK
-const client = new Client({
+const config = {
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.CHANNEL_SECRET,
-});
+};
+
+const client = new Client(config);
+
+// API Handler สำหรับ Webhook
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).send('Method Not Allowed');
+  }
 
 // รายการรางวัลทั้งหมด
 const prizes = [
@@ -75,13 +82,12 @@ module.exports = async (req, res) => {
           }
 
           await client.replyMessage(replyToken, message);
-        }
       }
-
-      return res.status(200).send('OK');
-    } catch (error) {
-      console.error('Error handling webhook:', error);
-      return res.status(500).send('Internal Server Error');
     }
-  } else {
-    return res.status(404).send
+
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).send('Internal Server Error');
+  }
+}
