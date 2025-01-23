@@ -1,17 +1,17 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { Client, middleware } = require('@line/bot-sdk');
-require('dotenv').config({ path: './config/.env' }); // โหลดค่าจาก .env ในโฟลเดอร์ config
+require('dotenv').config({ path: './config/.env' });
 
 // ตั้งค่า LINE Bot SDK
 const client = new Client({
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN, // อ่านค่าจาก .env
-  channelSecret: process.env.CHANNEL_SECRET, // อ่านค่าจาก .env
+  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.CHANNEL_SECRET,
 });
 
 // สร้าง Express Server
 const app = express();
-const port = process.env.PORT || 3000; // ใช้ค่าจาก .env หรือ 3000
+const port = process.env.PORT || 3000;
 
 // Middleware
 app.use(middleware({ channelSecret: process.env.CHANNEL_SECRET }));
@@ -35,26 +35,29 @@ const prizes = [
 const usersDrawn = {};
 
 // Webhook Endpoint
-app.post('/webhook', (req, res) => {
+app.post('/webhook', async (req, res) => {
   try {
     const events = req.body.events;
-    events.forEach(async (event) => {
+    if (!events || events.length === 0) {
+      return res.status(200).send('No events received'); // ตอบกลับทันทีหากไม่มี events
+    }
+
+    // จัดการแต่ละ event
+    for (const event of events) {
       if (event.type === 'message' && event.message.type === 'text') {
         const replyToken = event.replyToken;
         const userMessage = event.message.text.toLowerCase();
-        const userId = event.source.userId; // ใช้ userId เพื่อระบุผู้ใช้แต่ละคน
+        const userId = event.source.userId;
 
         let message;
 
         if (userMessage === 'hybrid test') {
-          // ตรวจสอบว่าผู้ใช้เล่นไปแล้วหรือยัง
           if (usersDrawn[userId]) {
             message = {
               type: 'text',
               text: `คุณเคยสุ่มรางวัลไปแล้ว: ${usersDrawn[userId]} 🎁`,
             };
           } else {
-            // สุ่มรางวัล
             const availablePrizes = prizes.filter(
               (prize) => !Object.values(usersDrawn).includes(prize)
             );
@@ -68,7 +71,6 @@ app.post('/webhook', (req, res) => {
               const randomIndex = Math.floor(Math.random() * availablePrizes.length);
               const prize = availablePrizes[randomIndex];
 
-              // บันทึกสถานะผู้ใช้และรางวัลที่ได้
               usersDrawn[userId] = prize;
 
               message = {
@@ -84,20 +86,22 @@ app.post('/webhook', (req, res) => {
           };
         }
 
-        try {
-          await client.replyMessage(replyToken, message);
-        } catch (err) {
-          console.error('Error replying message:', err);
-        }
+        // ตอบกลับข้อความ
+        await client.replyMessage(replyToken, message);
       }
-    });
+    }
 
-    // ส่ง status 200 เพื่อยืนยันว่า webhook ทำงานได้
-    res.status(200).end();
+    // ตอบกลับ LINE Platform
+    res.status(200).send('OK');
   } catch (error) {
     console.error('Error handling webhook:', error);
     res.status(500).send('Internal Server Error');
   }
+});
+
+// ตรวจสอบว่าเซิร์ฟเวอร์ทำงานได้
+app.get('/', (req, res) => {
+  res.status(200).send('Server is running!');
 });
 
 // เริ่มเซิร์ฟเวอร์
